@@ -36,6 +36,85 @@ def load_intelligent_results(file_path: str = "data/clusters/intelligent_hierarc
         return None
 
 
+def load_cluster_metadata(file_path: str = "data/clusters/cluster_metadata.json") -> Optional[Dict[str, Any]]:
+    """Load cluster titles and descriptions from JSON file"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"⚠️  Cluster metadata not found: {file_path}")
+        print("   Website will show generic cluster names")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in cluster metadata {file_path}: {e}")
+        return None
+
+
+def build_hierarchical_tree(intelligent_results: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a hierarchical tree structure showing coarse -> medium -> fine relationships"""
+    
+    # Get the core data
+    file_mapping = intelligent_results.get('file_mapping', [])
+    optimal_levels = intelligent_results.get('optimal_levels', {})
+    
+    coarse_labels = optimal_levels.get('coarse', {}).get('labels', [])
+    medium_labels = optimal_levels.get('medium', {}).get('labels', [])
+    fine_labels = optimal_levels.get('fine', {}).get('labels', [])
+    
+    coarse_clusters = optimal_levels.get('coarse', {}).get('clusters', {})
+    medium_clusters = optimal_levels.get('medium', {}).get('clusters', {})
+    fine_clusters = optimal_levels.get('fine', {}).get('clusters', {})
+    
+    # Build mapping from file to index
+    file_to_index = {file_path: idx for idx, file_path in enumerate(file_mapping)}
+    
+    # Build the tree structure
+    tree = {}
+    
+    # Process each coarse cluster
+    for coarse_id, coarse_files in coarse_clusters.items():
+        coarse_id = str(coarse_id)
+        tree[coarse_id] = {
+            'files': coarse_files,
+            'medium_clusters': {}
+        }
+        
+        # Find which medium clusters belong to this coarse cluster
+        medium_ids_in_coarse = set()
+        for file_path in coarse_files:
+            if file_path in file_to_index:
+                file_idx = file_to_index[file_path]
+                if file_idx < len(medium_labels):
+                    medium_ids_in_coarse.add(str(medium_labels[file_idx]))
+        
+        # Process each medium cluster within this coarse cluster
+        for medium_id in medium_ids_in_coarse:
+            if medium_id in medium_clusters:
+                medium_files = medium_clusters[medium_id]
+                tree[coarse_id]['medium_clusters'][medium_id] = {
+                    'files': medium_files,
+                    'fine_clusters': {}
+                }
+                
+                # Find which fine clusters belong to this medium cluster
+                fine_ids_in_medium = set()
+                for file_path in medium_files:
+                    if file_path in file_to_index:
+                        file_idx = file_to_index[file_path]
+                        if file_idx < len(fine_labels):
+                            fine_ids_in_medium.add(str(fine_labels[file_idx]))
+                
+                # Process each fine cluster within this medium cluster
+                for fine_id in fine_ids_in_medium:
+                    if fine_id in fine_clusters:
+                        fine_files = fine_clusters[fine_id]
+                        tree[coarse_id]['medium_clusters'][medium_id]['fine_clusters'][fine_id] = {
+                            'files': fine_files
+                        }
+    
+    return tree
+
+
 def load_semantic_fingerprints(fingerprints_dir: str = "data/fingerprints") -> Dict[str, Any]:
     """Load all semantic fingerprints from the fingerprints directory"""
     fingerprints = {}
@@ -133,45 +212,43 @@ def extract_cluster_insights(cluster_filenames: List[str], semantic_fingerprints
     return insights
 
 
-def generate_cluster_html(cluster_id: int, cluster_data: Dict[str, Any], insights: Dict[str, Any], level_name: str, outlier_class: str = "") -> str:
+def generate_cluster_html(cluster_id: int, cluster_data: Dict[str, Any], insights: Dict[str, Any], level_name: str, cluster_metadata: Optional[Dict[str, Any]] = None, outlier_class: str = "") -> str:
     """Generate HTML for a single cluster"""
     filenames = cluster_data.get('filenames', [])
     quality = insights['quality_indicators']
     
+    # Get cluster title and description from metadata
+    cluster_title = f"Cluster {cluster_id + 1}"  # Default fallback
+    cluster_description = None
+    
+    if cluster_metadata and 'cluster_titles_descriptions' in cluster_metadata:
+        level_metadata = cluster_metadata['cluster_titles_descriptions'].get(level_name, {})
+        cluster_info = level_metadata.get(str(cluster_id), {})
+        if cluster_info:
+            cluster_title = cluster_info.get('title', cluster_title)
+            cluster_description = cluster_info.get('description')
+    
     cluster_html = f"""
     <div class="cluster-card{outlier_class}" id="{level_name}_cluster_{cluster_id}">
         <div class="cluster-header">
-            <h4>Cluster {cluster_id + 1}</h4>
+            <h4>{cluster_title}</h4>
             <div class="cluster-stats">
                 <span class="stat">{quality['total_items']} items</span>
                 <span class="stat">{quality['coverage_ratio']:.1%} coverage</span>
                 <span class="stat">{quality['theme_diversity']} themes</span>
             </div>
-        </div>
-        
-        <div class="cluster-themes">
-            <h5>Main Themes:</h5>
-            <div class="theme-tags">
-    """
+        </div>"""
     
-    for theme in insights['cluster_themes']:
-        cluster_html += f'<span class="theme-tag">{theme}</span>'
+    # Add cluster definition if available
+    if cluster_description:
+        cluster_html += f"""
+        
+        <div class="cluster-definition">
+            <h5>Cluster Definition:</h5>
+            <p class="definition-text">{cluster_description}</p>
+        </div>"""
     
     cluster_html += """
-            </div>
-        </div>
-        
-        <div class="cluster-questions">
-            <h5>Central Questions:</h5>
-            <ul>
-    """
-    
-    for question in insights['central_questions']:
-        cluster_html += f'<li>{question}</li>'
-    
-    cluster_html += """
-            </ul>
-        </div>
         
         <div class="cluster-items">
             <details>
@@ -218,7 +295,7 @@ def generate_cluster_html(cluster_id: int, cluster_data: Dict[str, Any], insight
     return cluster_html
 
 
-def generate_level_html(level_name: str, level_data: Dict[str, Any], semantic_fingerprints: Dict[str, Any]) -> str:
+def generate_level_html(level_name: str, level_data: Dict[str, Any], semantic_fingerprints: Dict[str, Any], cluster_metadata: Optional[Dict[str, Any]] = None) -> str:
     """Generate HTML for a complete level (major/sub/specific)"""
     clusters = level_data.get('clusters', {})
     n_clusters = level_data.get('n_clusters', 0)
@@ -289,7 +366,7 @@ def generate_level_html(level_name: str, level_data: Dict[str, Any], semantic_fi
         
         cluster_data = {'filenames': cluster_filenames, 'is_outlier': is_outlier}
         insights = extract_cluster_insights(cluster_filenames, semantic_fingerprints)
-        cluster_html = generate_cluster_html(cluster_id, cluster_data, insights, level_name, outlier_class)
+        cluster_html = generate_cluster_html(cluster_id, cluster_data, insights, level_name, cluster_metadata, outlier_class)
         level_html += cluster_html
     
     level_html += """
@@ -300,11 +377,12 @@ def generate_level_html(level_name: str, level_data: Dict[str, Any], semantic_fi
     return level_html
 
 
-def generate_html_content(intelligent_results: Dict[str, Any], semantic_fingerprints: Dict[str, Any]) -> str:
-    """Generate the complete HTML content for the intelligent hierarchical website"""
+def generate_tree_html_content(intelligent_results: Dict[str, Any], semantic_fingerprints: Dict[str, Any], cluster_metadata: Optional[Dict[str, Any]] = None) -> str:
+    """Generate the complete HTML content for the hierarchical tree website"""
     
-    # Use the dict format which contains the cluster data we need
-    optimal_levels = intelligent_results.get('optimal_levels', {})
+    # Build the hierarchical tree structure
+    tree = build_hierarchical_tree(intelligent_results)
+    summary = intelligent_results.get('summary', {})
     
     all_evaluations = intelligent_results.get('all_evaluations', {})
     summary = intelligent_results.get('summary', {})
@@ -552,6 +630,27 @@ def generate_html_content(intelligent_results: Dict[str, Any], semantic_fingerpr
             border-radius: 15px;
             font-size: 0.8rem;
             font-weight: 500;
+        }}
+        
+        .cluster-definition {{
+            margin-bottom: 15px;
+        }}
+        
+        .cluster-definition h5 {{
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: #555;
+        }}
+        
+        .definition-text {{
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+            font-size: 0.9rem;
+            color: #444;
+            line-height: 1.5;
+            margin: 0;
         }}
         
         .cluster-questions {{
@@ -863,7 +962,7 @@ def generate_html_content(intelligent_results: Dict[str, Any], semantic_fingerpr
     
     # Add each level (dynamically discovered)
     for level_name, level_data in optimal_levels.items():
-        level_html = generate_level_html(level_name, level_data, semantic_fingerprints)
+        level_html = generate_level_html(level_name, level_data, semantic_fingerprints, cluster_metadata)
         html_content += level_html
     
     # Add evaluations section
@@ -1009,9 +1108,13 @@ def main():
     print("📂 Loading semantic fingerprints...")
     semantic_fingerprints = load_semantic_fingerprints()
     
+    # Load cluster metadata
+    print("📂 Loading cluster metadata...")
+    cluster_metadata = load_cluster_metadata()
+    
     # Generate HTML content
     print("🔨 Generating HTML content...")
-    html_content = generate_html_content(intelligent_results, semantic_fingerprints)
+    html_content = generate_html_content(intelligent_results, semantic_fingerprints, cluster_metadata)
     
     # Save the website
     output_file = Path("data/websites/intelligent_hierarchical_website.html")
