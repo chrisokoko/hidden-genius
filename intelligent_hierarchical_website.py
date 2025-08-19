@@ -36,17 +36,64 @@ def load_intelligent_results(file_path: str = "data/clusters/intelligent_hierarc
         return None
 
 
-def load_cluster_metadata(file_path: str = "data/clusters/cluster_metadata.json") -> Optional[Dict[str, Any]]:
-    """Load cluster titles and descriptions from JSON file"""
+def load_cluster_metadata(cluster_names_dir: str = "data/cluster_names") -> Optional[Dict[str, Any]]:
+    """Load cluster titles and descriptions from batch files in cluster_names directory"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"⚠️  Cluster metadata not found: {file_path}")
-        print("   Website will show generic cluster names")
-        return None
-    except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in cluster metadata {file_path}: {e}")
+        cluster_names_path = Path(cluster_names_dir)
+        if not cluster_names_path.exists():
+            print(f"⚠️  Cluster names directory not found: {cluster_names_dir}")
+            print("   Website will show generic cluster names")
+            return None
+        
+        # Find all batch files
+        batch_files = list(cluster_names_path.glob("*_batch_*.json"))
+        if not batch_files:
+            print(f"⚠️  No batch files found in: {cluster_names_dir}")
+            print("   Website will show generic cluster names")
+            return None
+        
+        print(f"📂 Loading cluster metadata from {len(batch_files)} batch files...")
+        
+        # Combine all cluster metadata
+        combined_metadata = {
+            "cluster_titles_descriptions": {
+                "coarse": {},
+                "medium": {},
+                "fine": {}
+            }
+        }
+        
+        for batch_file in batch_files:
+            try:
+                with open(batch_file, 'r', encoding='utf-8') as f:
+                    batch_data = json.load(f)
+                
+                # Extract cluster_titles_descriptions from this batch
+                if 'cluster_titles_descriptions' in batch_data:
+                    titles_descriptions = batch_data['cluster_titles_descriptions']
+                    
+                    # Merge each level
+                    for level in ['coarse', 'medium', 'fine']:
+                        if level in titles_descriptions:
+                            combined_metadata['cluster_titles_descriptions'][level].update(
+                                titles_descriptions[level]
+                            )
+                            
+                print(f"   ✅ Loaded: {batch_file.name}")
+            except Exception as e:
+                print(f"   ⚠️  Error loading {batch_file.name}: {e}")
+        
+        # Count total clusters loaded
+        total_clusters = sum(
+            len(combined_metadata['cluster_titles_descriptions'][level])
+            for level in ['coarse', 'medium', 'fine']
+        )
+        print(f"📊 Total clusters loaded: {total_clusters}")
+        
+        return combined_metadata
+        
+    except Exception as e:
+        print(f"❌ Error loading cluster metadata: {e}")
         return None
 
 
@@ -383,9 +430,8 @@ def generate_tree_html_content(intelligent_results: Dict[str, Any], semantic_fin
     # Build the hierarchical tree structure
     tree = build_hierarchical_tree(intelligent_results)
     summary = intelligent_results.get('summary', {})
-    
+    optimal_levels = intelligent_results.get('optimal_levels', {})
     all_evaluations = intelligent_results.get('all_evaluations', {})
-    summary = intelligent_results.get('summary', {})
     
     html_content = f"""
 <!DOCTYPE html>
@@ -1114,7 +1160,7 @@ def main():
     
     # Generate HTML content
     print("🔨 Generating HTML content...")
-    html_content = generate_html_content(intelligent_results, semantic_fingerprints, cluster_metadata)
+    html_content = generate_tree_html_content(intelligent_results, semantic_fingerprints, cluster_metadata)
     
     # Save the website
     output_file = Path("data/websites/intelligent_hierarchical_website.html")
