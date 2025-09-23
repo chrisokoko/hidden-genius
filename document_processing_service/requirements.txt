@@ -1,0 +1,30 @@
+# Document Processing Service Dependencies
+
+# Audio processing (from existing mega_script)
+speechrecognition==3.10.0
+pydub==0.25.1
+# OpenAI Whisper (optional but recommended for better audio transcription)
+openai-whisper
+# ffmpeg-python for audio format conversion
+ffmpeg-python
+
+# PDF processing
+PyPDF2==3.0.1
+# pdfplumber as potential fallback option
+pdfplumber
+
+# DOCX processing
+python-docx==0.8.11
+
+# Utilities
+python-dotenv==1.0.0
+tqdm
+
+# LLM processing for PDF text cleanup
+anthropic
+
+# Image processing for vision-enhanced PDF conversion
+pdf2image
+
+# Core Python packages (usually included)
+pathlib2; python_version < "3.4"

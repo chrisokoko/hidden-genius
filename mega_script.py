@@ -895,7 +895,7 @@ def process_embeddings():
     logger.info(f"Found {len(fingerprint_files)} fingerprint files")
     
     # Create output directory
-    output_dir = Path("data/embeddings")
+    output_dir = Path("data/02 embeddings")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     processed = 0
@@ -1474,18 +1474,18 @@ def find_natural_hierarchy_breaks(embeddings, linkage_matrix, evaluations):
                     height, eval_data = optimal_levels[level_name]
                     logger.info(f"Coarse level (balance-optimized): {eval_data['n_clusters']} clusters, "
                                f"quality={eval_data['metrics']['composite']['score']:.3f}")
-            # Apply fragmentation penalty ONLY to fine level
-            elif level_name == 'fine':
+            # Apply fragmentation penalty to medium and fine levels
+            elif level_name in ['medium', 'fine']:
                 # Calculate fragmentation penalty to reduce excessive small clusters
                 optimal_levels[level_name] = _select_fine_level_with_fragmentation_penalty(
                     natural_breaks, reasonable_evals, embeddings, linkage_matrix
                 )
                 if optimal_levels[level_name]:
                     height, eval_data = optimal_levels[level_name]
-                    logger.info(f"Fine level (with fragmentation penalty): {eval_data['n_clusters']} clusters, "
+                    logger.info(f"{level_name.title()} level (with fragmentation penalty): {eval_data['n_clusters']} clusters, "
                                f"quality={eval_data['metrics']['composite']['score']:.3f}")
             else:
-                # Use original mathematical approach for medium level
+                # Use original mathematical approach for other levels
                 optimal_levels[level_name] = (break_info['height'], break_info['evaluation'])
                 logger.info(f"Natural {level_name} level: {break_info['cluster_count']} clusters, "
                            f"silhouette={break_info['silhouette']:.3f}, quality={break_info['quality']:.3f}")
@@ -1675,18 +1675,18 @@ def _select_fine_level_with_fragmentation_penalty(natural_breaks, reasonable_eva
         single_item_clusters = sum(1 for size in cluster_sizes if size == 1)
         fragmentation_ratio = single_item_clusters / n_clusters if n_clusters > 0 else 0
         
-        # Apply penalty if fragmentation is excessive (>15% single-item clusters)
+        # Apply penalty if fragmentation is excessive (>20% single-item clusters)
         penalty = 0
-        if fragmentation_ratio > 0.15:
+        if fragmentation_ratio > 0.20:
             # Scale penalty based on how much fragmentation exceeds threshold
-            excess_fragmentation = fragmentation_ratio - 0.15
-            penalty = excess_fragmentation * 0.5  # 50% penalty weight
+            excess_fragmentation = fragmentation_ratio - 0.20
+            penalty = excess_fragmentation * 0.0  # No penalty weight
         
         # Additional penalty for very small clusters (1-2 items)
         small_clusters = sum(1 for size in cluster_sizes if size <= 2)
         small_cluster_ratio = small_clusters / n_clusters if n_clusters > 0 else 0
-        if small_cluster_ratio > 0.25:
-            additional_penalty = (small_cluster_ratio - 0.25) * 0.3  # Extra 30% penalty for 1-2 item clusters
+        if small_cluster_ratio > 0.35:
+            additional_penalty = (small_cluster_ratio - 0.35) * 0.0  # No penalty for 1-2 item clusters
             penalty += additional_penalty
         
         # Calculate adjusted score
@@ -2022,9 +2022,9 @@ def process_visualizations():
         clustering_data = json.load(f)
     
     # Load embeddings
-    embeddings_dir = Path("data/embeddings")
+    embeddings_dir = Path("data/02 embeddings")
     if not embeddings_dir.exists():
-        logger.error("Embeddings directory not found: data/embeddings")
+        logger.error("Embeddings directory not found: data/02 embeddings")
         return 1
     
     embedding_files = list(embeddings_dir.rglob("*.json"))
@@ -2143,9 +2143,9 @@ def process_multi_algorithm_visualizations():
     print("=" * 60)
     
     # Load embeddings first
-    embeddings_dir = Path("data/embeddings")
+    embeddings_dir = Path("data/02 embeddings")
     if not embeddings_dir.exists():
-        logger.error("Embeddings directory not found: data/embeddings")
+        logger.error("Embeddings directory not found: data/02 embeddings")
         return 1
     
     embedding_files = list(embeddings_dir.rglob("*.json"))
@@ -2176,7 +2176,7 @@ def process_multi_algorithm_visualizations():
     logger.info(f"Loaded {len(embeddings)} embeddings")
     
     # Load all clustering attempts
-    clusters_dir = Path("data/clusters")
+    clusters_dir = Path("data/03 clusters")
     summary_path = clusters_dir / "all_attempts_summary.json"
     
     if not summary_path.exists():
@@ -2268,9 +2268,9 @@ def process_clustering():
     print("=" * 60)
     
     # Collect all embedding files
-    embeddings_dir = Path("data/embeddings")
+    embeddings_dir = Path("data/02 embeddings")
     if not embeddings_dir.exists():
-        logger.error("Embeddings directory not found: data/embeddings")
+        logger.error("Embeddings directory not found: data/02 embeddings")
         logger.error("Run 'embeddings' command first to generate embeddings")
         return 1
     
@@ -2394,92 +2394,98 @@ def process_clustering():
         else:
             total_with_homes = total_analyzed  # Fallback if no levels found
         
-        # Create detailed results with all three levels
-        detailed_results = {
-            "clustering_type": "intelligent_hierarchical",
-            "linkage_matrix": result['linkage_matrix'].tolist(),
-            "file_mapping": filenames,
-            "optimal_levels": {},
-            "all_evaluations": {},
-            "summary": {
-                "total_analyzed": total_analyzed,
-                "total_with_homes": total_with_homes,
-                "total_outliers": total_outliers,
-                "method": "hierarchical_ward",
-                "processed_at": datetime.now().isoformat()
-            }
+        # Create cluster assignments with direct filename mapping
+        cluster_assignments = {
+            "levels": {}
         }
         
-        # Convert optimal_levels to the array format expected by the website
-        optimal_levels_array = []
-        
-        # Save each level's clustering (use dynamic level names)
+        # Process each level's clustering (use dynamic level names)
         for level_name, rec in result['recommendations'].items():
             if rec:
                 # Group files by cluster for this level
                 clusters = {}
                 labels = rec['labels']
                 for i, label in enumerate(labels):
-                    label_key = int(label - 1)  # Convert to 0-indexed
+                    label_key = str(int(label - 1))  # Convert to 0-indexed string key
                     if label_key not in clusters:
                         clusters[label_key] = []
                     clusters[label_key].append(filenames[i])
                 
-                # Store in both formats: dictionary for backward compatibility, array for website
-                detailed_results["optimal_levels"][level_name] = {
+                cluster_assignments["levels"][level_name] = {
                     "height": rec['height'],
                     "n_clusters": rec['n_clusters'],
-                    "quality_score": rec['quality_score'],
+                    "quality": rec['quality_score'],
                     "silhouette": rec['silhouette'],
-                    "labels": [int(x - 1) for x in labels],  # Convert to 0-indexed
-                    "clusters": clusters,
-                    "description": rec['description']
+                    "clusters": clusters
                 }
-                
-                # Also create array format for website
-                optimal_levels_array.append({
-                    "level": level_name,
-                    "clusters": rec['n_clusters'],
-                    "quality_score": rec['quality_score'],
-                    "silhouette": rec['silhouette'],
-                    "height": rec['height']
-                })
         
-        # Store array format for website consumption
-        detailed_results["optimal_levels_array"] = optimal_levels_array
-        
-        # Save evaluation data for all tested heights
-        for height, eval_data in result['all_evaluations'].items():
-            detailed_results["all_evaluations"][str(height)] = {
-                "n_clusters": eval_data['n_clusters'],
-                "quality_score": eval_data['metrics']['composite']['score'],
-                "silhouette": eval_data['metrics']['silhouette']['average'],
-                "balance_score": eval_data['metrics']['balance']['balance_score'],
-                "separation_ratio": eval_data['metrics']['separation']['ratio']
-            }
-        
-        # Save intelligent hierarchical results to clusters directory
-        clusters_dir = Path("data/clusters")
+        # Create clusters directory
+        clusters_dir = Path("data/03 clusters")
         clusters_dir.mkdir(parents=True, exist_ok=True)
         
-        output_path = clusters_dir / "intelligent_hierarchical_results.json"
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(detailed_results, f, indent=2, ensure_ascii=False)
-        
-        # Also save a simplified version for compatibility in clusters directory
-        simple_results = {
-            "clustering_results": {
-                "method": "intelligent_hierarchical",
-                "optimal_levels": detailed_results["optimal_levels"]
-            },
-            "file_mapping": filenames,
-            "summary": detailed_results["summary"]
+        # 1. Save linkage matrix separately
+        linkage_data = {
+            "clustering_type": "intelligent_hierarchical",
+            "linkage_matrix": result['linkage_matrix'].tolist(),
+            "processed_at": datetime.now().isoformat()
         }
         
-        simple_path = clusters_dir / "clustering_results.json"
-        with open(simple_path, 'w', encoding='utf-8') as f:
-            json.dump(simple_results, f, indent=2, ensure_ascii=False)
+        linkage_path = clusters_dir / "linkage_matrix.json"
+        with open(linkage_path, 'w', encoding='utf-8') as f:
+            json.dump(linkage_data, f, indent=2, ensure_ascii=False)
+        
+        # 2. Save cluster assignments
+        assignments_path = clusters_dir / "cluster_assignments.json"  
+        with open(assignments_path, 'w', encoding='utf-8') as f:
+            json.dump(cluster_assignments, f, indent=2, ensure_ascii=False)
+        
+        # 3. Generate and save clustering statistics
+        stats_data = {
+            "summary": {
+                "total_analyzed": total_analyzed,
+                "total_with_homes": total_with_homes,
+                "total_outliers": total_outliers,
+                "coverage_rate": round((total_with_homes/total_analyzed)*100, 1),
+                "method": "hierarchical_ward",
+                "processed_at": datetime.now().isoformat()
+            },
+            "cluster_size_distributions": {}
+        }
+        
+        # Calculate cluster size distributions for each level
+        for level_name, level_data in cluster_assignments["levels"].items():
+            clusters = level_data["clusters"]
+            total_clusters = len(clusters)
+            
+            # Count cluster sizes
+            size_counts = {}
+            for cluster_id, files in clusters.items():
+                size = len(files)
+                size_key = f"{size}_point" if size <= 12 else "12+_point"
+                size_counts[size_key] = size_counts.get(size_key, 0) + 1
+            
+            # Convert to percentages and organize
+            distribution = {}
+            for i in range(1, 13):
+                key = f"{i}_point"
+                count = size_counts.get(key, 0)
+                distribution[key] = {
+                    "count": count,
+                    "percent": round((count / total_clusters) * 100, 1) if total_clusters > 0 else 0.0
+                }
+            
+            # Add 12+ point clusters
+            count_12_plus = size_counts.get("12+_point", 0)
+            distribution["12+_point"] = {
+                "count": count_12_plus,
+                "percent": round((count_12_plus / total_clusters) * 100, 1) if total_clusters > 0 else 0.0
+            }
+            
+            stats_data["cluster_size_distributions"][level_name] = distribution
+        
+        stats_path = clusters_dir / "clustering_statistics.json"
+        with open(stats_path, 'w', encoding='utf-8') as f:
+            json.dump(stats_data, f, indent=2, ensure_ascii=False)
         
         print(f"\n🎉 Intelligent hierarchical clustering complete!")
         print(f"📊 Analysis Summary:")
@@ -2487,8 +2493,12 @@ def process_clustering():
         print(f"   Found meaningful homes: {total_with_homes}")
         print(f"   Outliers (single-item clusters): {total_outliers}")
         print(f"   Coverage rate: {total_with_homes/total_analyzed*100:.1f}%")
-        print(f"📁 Full results saved to: {output_path}")
-        print(f"📊 Compatibility results saved to: {simple_path}")
+        print(f"   Total coarse clusters: {len(coarse_clusters)}")
+        print(f"   Total medium clusters: {len(medium_clusters)}")
+        print(f"📁 Results saved to data/03 clusters/:")
+        print(f"   🌳 linkage_matrix.json - Hierarchical clustering matrix")
+        print(f"   📂 cluster_assignments.json - Direct filename-to-cluster mapping") 
+        print(f"   📊 clustering_statistics.json - Detailed size distributions & stats")
         print(f"💡 Use intelligent_hierarchical_website.py to explore the semantic hierarchy!")
         
         return 0
@@ -2498,6 +2508,7 @@ def process_clustering():
         import traceback
         traceback.print_exc()
         return 1
+
 
 def build_hierarchical_tree(intelligent_results: Dict[str, Any]) -> Dict[str, Any]:
     """Build a hierarchical tree structure showing coarse -> medium -> fine relationships"""
@@ -2747,7 +2758,7 @@ def process_single_cluster_naming(coarse_id=None):
     print("=" * 60)
     
     # Check if clustering results exist
-    clusters_dir = Path("data/clusters")
+    clusters_dir = Path("data/03 clusters")
     cluster_names_dir = Path("data/cluster_names")
     cluster_names_dir.mkdir(exist_ok=True)
     
@@ -2883,7 +2894,7 @@ def process_cluster_naming():
     print("=" * 60)
     
     # Check if clustering results exist
-    clusters_dir = Path("data/clusters")
+    clusters_dir = Path("data/03 clusters")
     results_path = clusters_dir / "intelligent_hierarchical_results.json"
     
     if not results_path.exists():
