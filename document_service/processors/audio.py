@@ -45,25 +45,11 @@ class AudioProcessor(BaseProcessor):
         """Check if this processor can handle the file."""
         return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
 
-    def process(self, file_path: Path, output_dir: Path) -> ProcessorResult:
+    def process(self, file_path: Path) -> ProcessorResult:
         """Process audio file and extract text."""
         start_time = time.time()
-        output_file = output_dir / f"{file_path.stem}.txt"
 
         try:
-            # Skip if output already exists
-            if output_file.exists():
-                logger.info(f"Skipping (already exists): {file_path.name}")
-                return ProcessorResult(
-                    success=True,
-                    text="",
-                    source_file=file_path,
-                    output_file=output_file,
-                    processor_type="audio",
-                    processing_time=0,
-                    error_message="File already exists"
-                )
-
             # Get file info
             file_size = file_path.stat().st_size
             logger.info(f"Transcribing: {file_path.name} ({file_size:,} bytes)")
@@ -83,11 +69,6 @@ class AudioProcessor(BaseProcessor):
                     transcript = "[TRANSCRIPTION COMPLETELY FAILED]"
                     transcription_method = "failed"
 
-            # Save transcript to text file
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(transcript)
-
             duration = time.time() - start_time
 
             # Check if transcription actually failed
@@ -96,7 +77,6 @@ class AudioProcessor(BaseProcessor):
                     success=False,
                     text=transcript,
                     source_file=file_path,
-                    output_file=None,
                     processor_type="audio",
                     processing_time=duration,
                     error_message=transcript
@@ -108,7 +88,6 @@ class AudioProcessor(BaseProcessor):
                 success=True,
                 text=transcript,
                 source_file=file_path,
-                output_file=output_file,
                 processor_type="audio",
                 processing_time=duration
             )
@@ -122,7 +101,6 @@ class AudioProcessor(BaseProcessor):
                 success=False,
                 text="",
                 source_file=file_path,
-                output_file=None,
                 processor_type="audio",
                 processing_time=duration,
                 error_message=str(e)

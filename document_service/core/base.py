@@ -29,13 +29,12 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def process(self, file_path: Path, output_dir: Path) -> ProcessorResult:
+    def process(self, file_path: Path) -> ProcessorResult:
         """
         Process the file and extract text.
 
         Args:
             file_path: Path to the file to process
-            output_dir: Directory where the output text file should be saved
 
         Returns:
             ProcessorResult object containing the extracted text and metadata

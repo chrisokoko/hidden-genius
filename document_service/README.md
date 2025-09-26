@@ -122,3 +122,17 @@ To add support for a new file type:
 ## License
 
 [Your license here]
+
+ How to Use:
+
+  # Install dependencies
+  pip install -r document_processing_service/requirements.txt
+
+  # Process single file
+  python -m document_processing_service.cli document.pdf output/
+
+  # Process directory
+  python -m document_processing_service.cli documents/ output/
+
+  # With verbose logging
+  python -m document_processing_service.cli audio.m4a transcripts/ -v

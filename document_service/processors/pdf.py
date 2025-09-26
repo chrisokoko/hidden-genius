@@ -24,25 +24,11 @@ class PDFProcessor(BaseProcessor):
         """Check if this processor can handle the file."""
         return file_path.suffix.lower() == '.pdf'
 
-    def process(self, file_path: Path, output_dir: Path) -> ProcessorResult:
+    def process(self, file_path: Path) -> ProcessorResult:
         """Process PDF: extract text with pdfplumber, then always send to LLM for formatting."""
         start_time = time.time()
-        output_file = output_dir / f"{file_path.stem}.txt"
 
         try:
-            # Skip if output already exists
-            if output_file.exists():
-                logger.info(f"Skipping (already exists): {file_path.name}")
-                return ProcessorResult(
-                    success=True,
-                    text="",
-                    source_file=file_path,
-                    output_file=output_file,
-                    processor_type="pdf",
-                    processing_time=0,
-                    error_message="File already exists"
-                )
-
             # Extract raw text with pdfplumber
             logger.info(f"Extracting text from {file_path.name}")
             raw_text = self._extract_with_pdfplumber(file_path)
@@ -65,11 +51,6 @@ class PDFProcessor(BaseProcessor):
                 logger.warning(f"Very little text extracted from {file_path.name}")
                 text = "[WARNING: Very little text extracted from PDF]"
 
-            # Save to output file
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(text)
-
             duration = time.time() - start_time
             logger.info(f"✅ Completed: {file_path.name} ({duration:.1f}s, {len(text)} chars, method: {extraction_method})")
 
@@ -77,7 +58,6 @@ class PDFProcessor(BaseProcessor):
                 success=True,
                 text=text,
                 source_file=file_path,
-                output_file=output_file,
                 processor_type=f"pdf_{extraction_method}",
                 processing_time=duration
             )
@@ -91,7 +71,6 @@ class PDFProcessor(BaseProcessor):
                 success=False,
                 text="",
                 source_file=file_path,
-                output_file=None,
                 processor_type="pdf",
                 processing_time=duration,
                 error_message=str(e)

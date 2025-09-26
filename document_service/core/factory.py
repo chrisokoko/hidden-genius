@@ -2,13 +2,18 @@
 Factory class that selects and runs the appropriate processor for each file type.
 """
 
+import json
 import logging
+import os
+import platform
+from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 
 from ..processors.audio import AudioProcessor
 from ..processors.pdf import PDFProcessor
 from ..processors.docx import DOCXProcessor
+from ..processors.txt import TxtProcessor
 from .base import BaseProcessor
 from .types import ProcessorResult
 
@@ -32,7 +37,90 @@ class DocumentProcessor:
             AudioProcessor(),
             PDFProcessor(),
             DOCXProcessor(),
+            TxtProcessor(),
         ]
+
+    def _get_file_creation_date(self, file_path: Path) -> str:
+        """
+        Get the actual creation date of a file (not modification date).
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            ISO formatted creation date string
+        """
+        try:
+            # Get file stats
+            stat = file_path.stat()
+
+            # On Windows, st_ctime is creation time
+            # On Unix/Linux/macOS, st_birthtime is creation time (if available)
+            if platform.system() == 'Windows':
+                creation_time = stat.st_ctime
+            else:
+                # Try to get birth time (creation time) on Unix systems
+                try:
+                    creation_time = stat.st_birthtime
+                except AttributeError:
+                    # Fall back to st_ctime if birthtime not available
+                    creation_time = stat.st_ctime
+
+            # Convert to datetime and format as ISO string
+            creation_date = datetime.fromtimestamp(creation_time)
+            return creation_date.isoformat()
+
+        except Exception:
+            # Fallback to current time if we can't get creation date
+            return datetime.now().isoformat()
+
+    def _get_file_type(self, file_path: Path) -> str:
+        """
+        Determine file type from extension.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            File type string
+        """
+        suffix = file_path.suffix.lower()
+
+        if suffix in ['.m4a', '.mp3', '.wav', '.ogg', '.flac']:
+            return 'audio'
+        elif suffix == '.pdf':
+            return 'pdf'
+        elif suffix in ['.docx', '.doc']:
+            return 'docx'
+        elif suffix == '.txt':
+            return 'txt'
+        else:
+            return 'unknown'
+
+    def _create_metadata_json(self, result: ProcessorResult) -> Dict[str, Any]:
+        """
+        Create metadata-only JSON structure.
+
+        Args:
+            result: ProcessorResult from a processor
+
+        Returns:
+            Dictionary with metadata only (no extracted text)
+        """
+        # Get file stats
+        stat = result.source_file.stat()
+
+        return {
+            "file_name": result.source_file.name,
+            "file_path": str(result.source_file.absolute()),
+            "file_type": self._get_file_type(result.source_file),
+            "creation_date": self._get_file_creation_date(result.source_file),
+            "file_size": stat.st_size,
+            "processing_date": datetime.now().isoformat(),
+            "processor_type": result.processor_type,
+            "processing_time": result.processing_time,
+            "success": result.success
+        }
 
     def process_file(self, file_path: Path, output_dir: Path) -> ProcessorResult:
         """
@@ -49,14 +137,47 @@ class DocumentProcessor:
         file_path = Path(file_path)
         output_dir = Path(output_dir)
 
+        # Create output file paths with subdirectories
+        markdown_output_file = output_dir / "markdowns" / f"{file_path.stem}.md"
+        json_output_file = output_dir / "jsons" / f"{file_path.stem}.json"
+
+        # Check if output already exists
+        if markdown_output_file.exists() and json_output_file.exists():
+            print(f"Skipping {file_path.name} (already exists)")
+            return ProcessorResult(
+                success=True,
+                text="",
+                source_file=file_path,
+                processor_type="cached",
+                processing_time=0,
+                error_message="File already exists"
+            )
+
         # Find the right processor
         for processor in self.processors:
             if processor.can_process(file_path):
                 print(f"Processing {file_path.name}... ", end="", flush=True)
-                result = processor.process(file_path, output_dir)
 
-                # Print result
+                # Let processor extract text
+                result = processor.process(file_path)
+
                 if result.success:
+                    # Create output directories
+                    markdown_output_file.parent.mkdir(parents=True, exist_ok=True)
+                    json_output_file.parent.mkdir(parents=True, exist_ok=True)
+
+                    # Save markdown file with extracted text
+                    with open(markdown_output_file, 'w', encoding='utf-8') as f:
+                        f.write(result.text)
+
+                    # Create metadata-only JSON
+                    metadata_json = self._create_metadata_json(result)
+
+                    # Save JSON file with metadata only
+                    with open(json_output_file, 'w', encoding='utf-8') as f:
+                        json.dump(metadata_json, f, indent=2)
+
+
                     print("done")
                 else:
                     print(f"failed ({result.error_message})")
@@ -69,7 +190,6 @@ class DocumentProcessor:
             success=False,
             text="",
             source_file=file_path,
-            output_file=None,
             processor_type="unknown",
             processing_time=0,
             error_message="No processor available for this file type"
@@ -139,6 +259,6 @@ class DocumentProcessor:
                 extensions.extend(processor.SUPPORTED_EXTENSIONS)
 
         # Add other known extensions
-        extensions.extend(['.pdf', '.docx', '.doc'])
+        extensions.extend(['.pdf', '.docx', '.doc', '.txt'])
 
         return sorted(list(set(extensions)))

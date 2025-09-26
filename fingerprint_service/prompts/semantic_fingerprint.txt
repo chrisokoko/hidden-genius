@@ -1,0 +1,322 @@
+You are an expert at analyzing insights and extracting their essential cognitive DNA. Your task is to read a text document and extract its semantic fingerprint according to the comprehensive schema below.
+
+CRITICAL: You MUST respond with ONLY valid JSON. Do not include any explanatory text, markdown formatting, or commentary before or after the JSON. Your entire response must be a valid JSON object containing the semantic fingerprint.
+
+## Input
+
+A text document (may contain filler words, incomplete sentences, stream-of-consciousness thinking)
+
+## Output Format
+
+Return ONLY a JSON object with the semantic fingerprint. The object follows this structure:
+
+```json
+{
+  "title": "3-7 word concise title for this document",
+
+  "type": "What this document actually is (e.g., blank template, project management sheet, idea, analysis, etc.)",
+
+  "purpose": "Why this document likely exists and how it could be useful",
+  "essence": "2-3 sentences explaining what this document contains and its purpose",
+
+  "keywords": [
+    "Named entities and symbolic figures"
+  ],
+
+  "tags": [
+    "Descriptive tags covering themes, topics, and concepts"
+  ],
+
+  "core_exploration": {
+    "central_question": "The fundamental inquiry driving this insight",
+    "key_tension": "The productive contradiction being reconciled",
+    "breakthrough_moment": "The specific realization that shifted understanding",
+    "edge_of_understanding": "What they recognize they haven't figured out yet"
+  },
+
+  "conceptual_dna": [
+    "1-4 essential concept-patterns that capture core wisdom",
+    "Should be quotable standalone insights"
+  ],
+
+  "insight_pattern": {
+    "thinking_styles": ["array of thinking styles from taxonomy"],
+    "insight_type": "single category from taxonomy",
+    "development_stage": "single maturity level from taxonomy"
+  },
+  "insight_quality": {
+    "uniqueness_score": 0.0,
+    "depth_score": 0.0,
+    "generative_score": 0.0,
+    "usefulness_score": 0.0,
+    "confidence_score": 0.0
+  }
+}
+
+```
+
+## Schema Definition & Scoring Rubrics
+
+## Core Exploration
+
+- Central Question (Semantic)
+    
+    **Definition:** The fundamental inquiry driving this insight - the deeper question beneath the surface topic that the person is genuinely trying to resolve, even if they don't explicitly state it as a question.
+    
+    **Identification Markers:**
+    
+    - Often implicit but can be inferred from what they're exploring
+    - The "why" behind their observation or experience
+    - The problem they're trying to solve through this thinking
+    - The understanding they're seeking to develop
+    
+    **Examples:**
+    
+    - "How do we create deep connection without losing ourselves?"
+    - "What enables transformation in stuck systems?"
+    - "Why do some practices create lasting change while others don't?"
+    - "How can structure and freedom coexist?"
+- Key Tension (Semantic)
+    
+    **Definition:** The productive contradiction or paradox at the heart of the insight. This is the "both/and" that the person is trying to reconcile - two seemingly opposing forces that both feel true.
+    
+    **Identification Markers:**
+    
+    - Two concepts that seem mutually exclusive but both necessary
+    - The "versus" that's actually an "and"
+    - The polarity that generates creative energy
+    - Often the source of the breakthrough
+    
+    **Examples:**
+    
+    - "Structure vs. emergence"
+    - "Solitude vs. connection"
+    - "Efficiency vs. humanity"
+    - "Boundaries vs. intimacy"
+- Breakthrough Moment (Semantic)
+    
+    **Definition:** The specific realization that shifted understanding - the moment when something clicked, revealed itself, or suddenly made sense. This is the "aha" that transforms confusion into clarity or reveals a new way of seeing.
+    
+    **Identification Markers:**
+    
+    - Sudden clarity after confusion or struggle
+    - A reversal of previous understanding
+    - Discovery that two things thought separate are actually connected
+    - The moment when a pattern becomes visible
+    - Often accompanied by surprise or excitement
+    
+    **Examples:**
+    
+    - "Yielding creates more connection than pursuing"
+    - "The resistance IS the information"
+    - "Structure doesn't limit creativity - it enables it"
+    - "My personal patterns mirror organizational patterns"
+- Edge of Understanding (Semantic)
+    
+    **Definition:** The frontier where clarity becomes uncertain - what the person recognizes they haven't figured out yet. This is where their current insight reaches its limit and points toward the next exploration needed.
+    
+    **Identification Markers:**
+    
+    - Questions without answers at the end of the insight
+    - Acknowledged limitations of current understanding
+    - Recognition that something works in one context but uncertain about others
+    - The "but I don't know why" or "but I can't explain how"
+    - Where confidence drops and speculation begins
+    
+    **Examples:**
+    
+    - "This works one-on-one, but I don't know how to scale it"
+    - "I see the pattern but can't explain why it works"
+    - "There's something here about timing I haven't figured out"
+    - "This applies to relationships, but does it work in organizations?"
+- Conceptual DNA (Semantic)
+    
+    **Definition:** The 2-4 essential concept-patterns that capture the core wisdom of this insight. These are not just topics or categories, but insight phrases that could stand alone as valuable understanding.
+    
+    **Identification Markers:**
+    
+    - Could be quoted as standalone wisdom
+    - Captures a relationship or dynamic, not just a topic
+    - The "quotable" essence of the insight
+    
+    **Examples:**
+    
+    - "Embodied awareness as relational bridge"
+    - "Yielding as pathway to intimacy"
+    - "Constraints as creative catalysts"
+    - "Vulnerability as leadership strength"
+
+## Insight Pattern
+
+- Insight Types (Semantic)
+    
+    **Definition:** The primary category of intellectual contribution this insight represents - what kind of knowledge artifact is being developed through this thinking.
+    
+    **Returns:** Returns a string with a single value from the taxonomy.
+    
+    **Taxonomy:**
+    
+    - **`observation`** - A noticed pattern or phenomenon captured without interpretation or analysis. Raw experiential data that caught attention but hasn't been processed into deeper understanding.
+    - **`methodology`** - A reproducible approach or systematic process that others could follow to achieve similar results. Codified knowledge refined into teachable, transferable steps.
+    - **`framework`** - A structural model for organizing understanding within a domain. Conceptual architecture that identifies key components, relationships, and organizing principles.
+    - **`philosophy`** - A worldview or fundamental principle about the nature of reality. Core convictions and assumptions that underlie other forms of thinking and guide interpretation of experience.
+    - **`synthesis`** - A novel combination bringing together previously separate ideas to create new understanding. Creative integration where existing elements merge to reveal unexpected connections.
+    - **`theory`** - An explanatory model with causal mechanisms and predictive power. Systematic understanding of why phenomena occur, offering testable explanations that can anticipate outcomes.
+    - **`question`** - Articulation of unknowing that opens new territory for exploration. Generative inquiry that reveals the edges of current understanding and creates space for discovery.
+    - **`distinction`** - Recognition of an important difference previously unseen or conflated. Discriminating between concepts that appear similar but operate according to different principles.
+    - **`hypothesis`** - A tentative explanation bridging observation and theory, inviting testing. An educated guess about mechanisms or relationships while acknowledging uncertainty.
+    - **`practice`** - A specific action or embodied approach being developed through repeated engagement. Implementation-focused insight emphasizing experiential learning and personal discipline.
+    - **`story`** - Narrative sense-making that constructs meaning and identity from experience. Personal mythology that creates coherence and significance through interpretive frameworks.
+- Thinking Styles (Semantic)
+    
+    **Definition:** The characteristic cognitive approach(es) used in this insight - *how* the person is processing information and generating understanding, not *what* they're thinking about.
+    
+    **Returns:** Returns an array that may have multiple values from the taxonomy: `["embodied-somatic", "systems-holistic"]` for someone using body awareness to understand systems
+    
+    **Taxonomy**
+    
+    - **`analytical-linear`** - Sequential logical reasoning that breaks complex problems into component parts, establishing clear cause-and-effect relationships through step-by-step deduction.
+    - **`mathematical-formal`** - Abstract reasoning through symbols, equations, and formal logical systems where relationships are expressed through mathematical structures rather than natural language.
+    - **`systems-holistic`** - Pattern recognition that emphasizes interconnections, feedback loops, and emergent properties arising from whole-system dynamics rather than individual components.
+    - **`embodied-somatic`** - Knowledge processing through bodily sensation, physical awareness, and felt sense, where the body serves as both source and validator of understanding.
+    - **`narrative-temporal`** - Meaning-making through story structure, chronological sequence, and developmental arcs that create coherence through time and relationship.
+    - **`metaphorical-associative`** - Understanding through analogy, similarity patterns, and cross-domain mapping where insights emerge from recognizing structural resemblances.
+    - **`dialectical-synthetic`** - Integration of apparent contradictions by finding higher-order synthesis that transcends and includes opposing perspectives or forces.
+    - **`intuitive-emergent`** - Direct knowing that arises spontaneously without deliberate analysis, trusting non-rational sources of understanding and allowing insights to surface naturally.
+    - **`contemplative-receptive`** - Understanding that emerges through sustained attention, witnessing awareness, and receptive presence rather than active analysis or manipulation.
+    - **`experimental-iterative`** - Knowledge development through systematic testing, adjustment based on results, and progressive refinement through empirical engagement.
+- Development Stage (Semantic)
+    
+    **Definition:** The most relevant development stage for this insight in the intellectual journey.
+    
+    **Returns:** Returns a string with a single value from the taxonomy.
+    
+    **Taxonomy:**
+    
+    - **`noticing`** - First awareness of something worth attention before any conceptual understanding emerges. Pre-conceptual recognition where curiosity is sparked but no interpretation or analysis has yet begun.
+    - **`exploring`** - Active investigation through questions and observations, gathering experiential data without yet forming coherent understanding. The insight involves uncertainty and inquiry-based engagement.
+    - **`developing`** - Building understanding through pattern recognition and conceptual connections, where hypotheses form and relationships between ideas become visible. Active sense-making and framework construction.
+    - **`breakthrough`** - Sudden shift in understanding where previously unclear patterns suddenly crystallize into coherent insight. Quantum leap in comprehension that fundamentally changes perspective.
+    - **`integrating`** - Connecting new understanding to existing knowledge frameworks, weaving the insight into broader conceptual architecture and established mental models.
+    - **`refining`** - Polishing and clarifying understanding through precision work, sharpening distinctions and definitions to achieve greater accuracy and nuance.
+    - **`applying`** - Testing understanding through practical implementation, moving from theoretical comprehension to real-world engagement and empirical validation.
+    - **`teaching`** - Understanding mature enough for transmission to others, with sufficient clarity and completeness to guide someone else's learning and development.
+
+## Insight Quality
+
+- Uniqueness Score (Semantic)
+    
+    **Definition:** How distinctive or rare this perspective is compared to conventional thinking - measuring whether this insight represents a common observation or a revolutionary viewpoint.
+    
+    **Score Ranges:**
+    
+    - `0.0-0.2` - Common knowledge, widely understood
+    - `0.3-0.4` - Somewhat unique angle on known concept
+    - `0.5-0.6` - Distinctive perspective, uncommon connection
+    - `0.7-0.8` - Rare insight, novel approach
+    - `0.9-1.0` - Revolutionary, paradigm-shifting perspective
+- Depth Score (Semantic)
+    
+    **Definition:** How far below surface observation this insight penetrates - whether it addresses symptoms or root causes, patterns or principles, what happens or why it happens.
+    
+    **Depth Levels:**
+    
+    - `0.0-0.2` - Surface observation: "I noticed X"
+    - `0.3-0.4` - Pattern recognition: "X happens when Y"
+    - `0.5-0.6` - Mechanism understanding: "X happens because Z"
+    - `0.7-0.8` - Principle articulation: "This reflects fundamental law"
+    - `0.9-1.0` - Meta-principle: "The principle itself follows pattern"
+- Generative Score (Semantic)
+    
+    **Definition:** The likelihood that this insight will spawn additional insights - whether it opens new territories, raises new questions, or provides a lens for reexamining other experiences.
+    
+    **Potential Levels:**
+    
+    - `0.0-0.2` - Dead end, complete in itself
+    - `0.3-0.4` - Minor extensions possible
+    - `0.5-0.6` - Several follow-up questions raised
+    - `0.7-0.8` - Opens new territory for exploration
+    - `0.9-1.0` - Paradigm shift enabling many new insights
+- Usefulness Score (Semantic)
+    
+    **Definition:** How practically applicable this insight is for solving real-world problems or improving lived experience - measuring the potential for concrete implementation and beneficial outcomes.
+    
+    **Usefulness Levels:**
+    
+    - `0.0-0.2` - Abstract or theoretical with no clear practical application
+    - `0.3-0.4` - Potential utility but requires significant adaptation or development
+    - `0.5-0.6` - Clear practical value with moderate implementation barriers
+    - `0.7-0.8` - Highly actionable with direct applicability to real problems
+    - `0.9-1.0` - Immediately implementable with transformative practical impact
+- Confidence Score (Semantic)
+    
+    **Definition:** The degree of certainty expressed in this insight - how sure the person sounds about their understanding, ranging from tentative exploration to absolute conviction.
+    
+    **Scale:**
+    
+    - `0.0-0.2` - Very uncertain: "Maybe", "possibly", "might be"
+    - `0.3-0.4` - Tentative: "It seems like", "appears to be"
+    - `0.5-0.6` - Moderate: "I think", "probably"
+    - `0.7-0.8` - Confident: "I believe", "clearly"
+    - `0.9-1.0` - Certain: "Definitely", "absolutely", "I know"
+
+## Additional Fields
+
+- **Title (Semantic)**
+    
+    **Definition:** A concise 3-7 word title that captures the essence of this document.
+    
+    **Purpose:** Quick identification and categorization
+    
+    **Examples:** "Coaching Evaluation Framework", "Project Planning Template", "Leadership Philosophy Notes"
+    
+- **Type (Semantic)**
+    
+    **Definition:** What this document actually is - its format and category.
+    
+    **Purpose:** Quick categorization of document format
+    
+    **Examples:**
+    
+    - "voice memo transcript"
+    - "blank template"
+    - "meeting notes"
+    - "personal journal entry"
+    - "client deliverable"
+    - "brainstorming session"
+    - "formal report"
+    - "grocery list"
+    - "email draft"
+- **Purpose (Semantic)**
+    
+    **Definition:** 1 sentence explaining why this document likely exists - the context of its creation and its intended use. Include enough detail that someone could understand the document's usefulness without reading it.
+    
+    **Purpose:** Understand the "why" behind the document's existence
+    
+    **Examples:**
+    
+    - "One-off voice note sent to a client after a coaching session to summarize key takeaways and next steps"
+    - "Personal reminder list created while shopping, likely meant to be discarded after use"
+    - "Template created for repeated use in evaluating coaching relationships, designed to standardize feedback collection"
+    - "Stream-of-consciousness reflection recorded during a morning walk to process a difficult conversation"
+    - "Formal proposal prepared for board presentation to secure funding for new initiative"
+- **Essence (Semantic)**
+    
+    **Definition:** 2-3 sentences explaining what this document actually contains - the substance and content that would save someone from having to read it.
+    
+    **Purpose:** Complete summary of document content
+    
+    **Example:** "Contains seven evaluation questions about coaching effectiveness, covering what worked, what didn't, progress made, and areas needing work. Includes sections for assessing personal strengths/weaknesses and space for additional feedback. The form is empty, ready to be filled out."
+    
+- Tags (Semantic)
+    
+    Extract a concise list (up to 8) of the most important academic, professional, or personal topics that would be useful as search filters for someone. The tags must be 1-3 words each, title case, and contain no slashes. Examples:  Influencer Marketing, Creator Economy, Religious Philosophy, Quantum Physics, Family Dynamics, Personal Transformation, Biblical Narrative, Community Building, Salary Considerations, Identity Crisis. Do not include: Emotional states, common actions, relationship terms, or general experiences. Output a flat comma-separated list.
+    
+- Keywords (Semantic)
+    
+    Extract a concise list (up to 8) of the most important named entities and symbolic figures that someone might search for later. Extract only: People's names, Organizations/companies/institutions, Cities or specific places, Symbolic figures/metaphors/archetypes (e.g., "lion," "chief," "fire," "mother wound"), Named events or rituals (e.g., "wedding," "Solstice," "interview," "brothers' circle"). Do not include: Emotional states, common actions, relationship terms, or general experiences. Output a flat comma-separated list.
+    
+
+---
+
+**Text Document:**

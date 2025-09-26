@@ -13,6 +13,7 @@ class FileType(Enum):
     AUDIO = "audio"
     PDF = "pdf"
     DOCX = "docx"
+    TXT = "txt"
     UNKNOWN = "unknown"
 
 
@@ -25,7 +26,6 @@ class ProcessorResult:
         success: Whether processing was successful
         text: Extracted text content
         source_file: Path to the input file
-        output_file: Path to the output file (if saved)
         processor_type: Type of processor used
         processing_time: Time taken to process in seconds
         error_message: Error message if processing failed
@@ -33,7 +33,6 @@ class ProcessorResult:
     success: bool
     text: str
     source_file: Path
-    output_file: Optional[Path]
     processor_type: str
     processing_time: float
     error_message: Optional[str] = None
