@@ -1,8 +1,9 @@
 """
-Clustering service with clean architecture and separation of concerns.
+Hierarchical clustering service with clean architecture and deterministic results.
 
 This module provides the main ClusteringService class that orchestrates
-the clustering pipeline using dependency injection and clean interfaces.
+the hierarchical clustering pipeline with dot notation IDs (1, 1.1, 1.2, 1.1.1, etc.)
+and deterministic separation metrics for reproducible clustering results.
 """
 
 import logging
@@ -226,7 +227,7 @@ class ClusteringService:
     def _format_results(self, linkage_matrix: np.ndarray, evaluations: Dict,
                        optimal_levels: Dict, filenames: List[str],
                        embeddings: np.ndarray) -> Dict:
-        """Format complete clustering results."""
+        """Format complete clustering results with hierarchical dot notation."""
         results = {
             'linkage_matrix': linkage_matrix,
             'all_evaluations': evaluations,
@@ -235,11 +236,14 @@ class ClusteringService:
             'filenames': filenames
         }
 
+        # Generate hierarchical cluster mappings for all levels
+        hierarchical_clusters = self._generate_hierarchical_clusters(linkage_matrix, optimal_levels, filenames)
+
         # Format each level
         for level, level_data in optimal_levels.items():
             if level_data is not None:
                 height, eval_data = level_data
-                clusters = self._create_cluster_mapping(eval_data['labels'], filenames)
+                clusters = hierarchical_clusters[level]
 
                 results['optimal_levels'][level] = {
                     'height': float(height),
@@ -266,18 +270,71 @@ class ClusteringService:
 
         return results
 
-    def _create_cluster_mapping(self, labels: np.ndarray, filenames: List[str]) -> Dict[str, List[str]]:
-        """Create mapping of cluster IDs to filenames."""
-        clusters = {}
-        for idx, cluster_id in enumerate(labels):
-            cluster_key = str(int(cluster_id))
-            if cluster_key not in clusters:
-                clusters[cluster_key] = []
 
-            filename = filenames[idx] if idx < len(filenames) else f"item_{idx}"
-            clusters[cluster_key].append(filename)
+    def _generate_hierarchical_clusters(self, linkage_matrix: np.ndarray, optimal_levels: Dict, filenames: List[str]) -> Dict[str, Dict[str, List[str]]]:
+        """Generate hierarchical cluster mappings with dot notation using linkage tree structure."""
+        if not optimal_levels:
+            return {}
 
-        return clusters
+        # Sort levels by number of clusters (coarse to fine)
+        sorted_levels = sorted(
+            [(name, data) for name, data in optimal_levels.items() if data is not None],
+            key=lambda x: x[1][1]['n_clusters']  # x[1][1] gets eval_data from (height, eval_data)
+        )
+
+        hierarchical_results = {}
+        level_mappings = {}  # Track cluster ID mappings between levels
+
+        for level_idx, (level_name, level_data) in enumerate(sorted_levels):
+            height, eval_data = level_data
+            labels = eval_data['labels']
+            unique_clusters = sorted(set(labels))
+
+            if level_idx == 0:
+                # First level (coarse): simple numeric IDs
+                cluster_mapping = {}
+                for i, original_id in enumerate(unique_clusters):
+                    hierarchical_id = str(i + 1)
+                    cluster_mapping[original_id] = hierarchical_id
+
+                level_mappings[level_name] = cluster_mapping
+            else:
+                # Subsequent levels: build hierarchical IDs based on parent level
+                parent_level_name, parent_level_data = sorted_levels[level_idx - 1]
+                parent_height, parent_eval_data = parent_level_data
+                parent_labels = parent_eval_data['labels']
+                parent_mapping = level_mappings[parent_level_name]
+
+                # Build parent-child relationships
+                parent_child_map = {}
+                for idx, (parent_cluster, child_cluster) in enumerate(zip(parent_labels, labels)):
+                    parent_id = parent_mapping[parent_cluster]
+                    if parent_id not in parent_child_map:
+                        parent_child_map[parent_id] = set()
+                    parent_child_map[parent_id].add(child_cluster)
+
+                # Generate hierarchical IDs
+                cluster_mapping = {}
+                for parent_id, child_clusters in parent_child_map.items():
+                    sorted_children = sorted(child_clusters)
+                    for child_idx, child_cluster in enumerate(sorted_children):
+                        hierarchical_id = f"{parent_id}.{child_idx + 1}"
+                        cluster_mapping[child_cluster] = hierarchical_id
+
+                level_mappings[level_name] = cluster_mapping
+
+            # Create final cluster mapping with filenames
+            clusters = {}
+            for idx, cluster_id in enumerate(labels):
+                hierarchical_id = level_mappings[level_name][cluster_id]
+                if hierarchical_id not in clusters:
+                    clusters[hierarchical_id] = []
+                filename = filenames[idx] if idx < len(filenames) else f"item_{idx}"
+                clusters[hierarchical_id].append(filename)
+
+            hierarchical_results[level_name] = clusters
+
+        return hierarchical_results
 
     def _create_summary(self, embeddings: np.ndarray, evaluations: Dict,
                        optimal_levels: Dict) -> Dict:

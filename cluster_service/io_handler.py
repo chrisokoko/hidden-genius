@@ -1,7 +1,8 @@
 """
-File I/O operations for the clustering service.
+File I/O operations for the hierarchical clustering service.
 
-Handles loading embeddings from JSON files and saving clustering results.
+Handles loading embeddings from JSON files and saving clustering results
+with hierarchical dot notation IDs properly sorted (1, 1.1, 1.2, 1.1.1, etc.).
 """
 
 import json
@@ -101,35 +102,21 @@ class IOHandler:
             raise IOError(f"Could not save results to {output_dir}: {e}")
 
     @staticmethod
-    def _calculate_cluster_size_distribution(clusters: Dict[str, List[str]]) -> Dict[str, int]:
-        """Calculate distribution of cluster sizes (1-10+ items)."""
-        size_counts = {
-            "1_item": 0,
-            "2_items": 0,
-            "3_items": 0,
-            "4_items": 0,
-            "5_items": 0,
-            "6_items": 0,
-            "7_items": 0,
-            "8_items": 0,
-            "9_items": 0,
-            "10_plus_items": 0
-        }
+    def _sort_hierarchical_clusters(clusters: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Sort clusters by hierarchical dot notation (1, 1.1, 1.2, 1.1.1, 1.1.2, etc.)."""
+        def sort_key(item):
+            """Sort hierarchical IDs numerically by each level."""
+            cluster_id, files = item
+            # Split by dots and convert each part to int for proper numeric sorting
+            try:
+                parts = [int(x) for x in cluster_id.split('.')]
+                return parts
+            except ValueError:
+                # Fallback for non-hierarchical IDs
+                return [int(cluster_id)] if cluster_id.isdigit() else [float('inf')]
 
-        for cluster_files in clusters.values():
-            size = len(cluster_files)
-            if size >= 10:
-                size_counts["10_plus_items"] += 1
-            elif size >= 1:
-                size_counts[f"{size}_item{'s' if size > 1 else ''}"] += 1
-
-        return size_counts
-
-    @staticmethod
-    def _calculate_individual_cluster_sizes(clusters: Dict[str, List[str]]) -> Dict[str, int]:
-        """Calculate individual cluster sizes for levels with <10 clusters."""
-        return {f"cluster_{cluster_id}": len(files)
-                for cluster_id, files in clusters.items()}
+        sorted_items = sorted(clusters.items(), key=sort_key)
+        return dict(sorted_items)
 
     @staticmethod
     def _save_cluster_assignments(results: Dict[str, Any], output_dir: Path) -> None:
@@ -151,25 +138,16 @@ class IOHandler:
 
         for level_name, level_data in optimal_levels.items():
             if level_data:
+                # Sort clusters by hierarchical dot notation
                 clusters = level_data['clusters']
-                n_clusters = level_data['n_clusters']
+                sorted_clusters = IOHandler._sort_hierarchical_clusters(clusters)
 
-                # Basic structure
+                # Simple structure with just essential info
                 cluster_assignments = {
                     'level_name': level_name,
-                    'n_clusters': n_clusters
+                    'n_clusters': level_data['n_clusters'],
+                    'clusters': sorted_clusters
                 }
-
-                # Add appropriate cluster size statistics
-                if n_clusters >= 10:
-                    # For levels with 10+ clusters, show distribution
-                    cluster_assignments['cluster_size_distribution'] = IOHandler._calculate_cluster_size_distribution(clusters)
-                else:
-                    # For levels with <10 clusters, show individual sizes
-                    cluster_assignments['individual_cluster_sizes'] = IOHandler._calculate_individual_cluster_sizes(clusters)
-
-                # Add the clusters data
-                cluster_assignments['clusters'] = clusters
 
                 # Add number prefix for proper sorting
                 level_num = level_order.get(level_name, 0)

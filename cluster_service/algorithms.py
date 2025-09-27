@@ -1,8 +1,9 @@
 """
-Pure mathematical algorithms for hierarchical clustering.
+Pure mathematical algorithms for hierarchical clustering with deterministic behavior.
 
 This module contains all the mathematical functions for clustering analysis,
-with no side effects or I/O operations.
+with deterministic separation metrics and no side effects or I/O operations.
+All algorithms produce reproducible results across multiple runs.
 """
 
 import logging
@@ -332,7 +333,7 @@ def select_hierarchy_levels(natural_breaks: List[Dict], max_levels: int = 5) -> 
 # Private helper functions
 
 def _calculate_separation_metrics(embeddings: np.ndarray, clusters: np.ndarray) -> Dict[str, float]:
-    """Calculate intra-cluster vs inter-cluster distance metrics."""
+    """Calculate intra-cluster vs inter-cluster distance metrics with deterministic sampling."""
     intra_distances = []
     inter_distances = []
 
@@ -341,20 +342,30 @@ def _calculate_separation_metrics(embeddings: np.ndarray, clusters: np.ndarray) 
         cluster_points = embeddings[cluster_mask]
 
         if len(cluster_points) > 1:
-            # Sample distances for efficiency
+            # Deterministic sampling for efficiency
             n_samples = min(len(cluster_points), 50)
-            sampled_indices = np.random.choice(len(cluster_points), n_samples, replace=False)
-            for i in sampled_indices[:10]:
-                for j in sampled_indices[i+1:min(i+11, len(sampled_indices))]:
-                    intra_distances.append(np.linalg.norm(cluster_points[i] - cluster_points[j]))
+            # Use evenly spaced indices for deterministic sampling
+            sampled_indices = np.linspace(0, len(cluster_points) - 1, n_samples, dtype=int)
+            # Take first 10 for distance calculations
+            selected_indices = sampled_indices[:10]
 
-        # Inter-cluster distances
+            for i in range(len(selected_indices)):
+                for j in range(i + 1, min(i + 11, len(selected_indices))):
+                    idx_i = selected_indices[i]
+                    idx_j = selected_indices[j]
+                    intra_distances.append(np.linalg.norm(cluster_points[idx_i] - cluster_points[idx_j]))
+
+        # Inter-cluster distances with deterministic sampling
         other_points = embeddings[~cluster_mask]
         if len(other_points) > 0 and len(cluster_points) > 0:
             n_samples = min(10, len(cluster_points), len(other_points))
-            for _ in range(n_samples):
-                cluster_idx = np.random.randint(len(cluster_points))
-                other_idx = np.random.randint(len(other_points))
+            # Deterministic selection of cluster and other points
+            cluster_indices = np.linspace(0, len(cluster_points) - 1, n_samples, dtype=int)
+            other_indices = np.linspace(0, len(other_points) - 1, n_samples, dtype=int)
+
+            for i in range(n_samples):
+                cluster_idx = cluster_indices[i]
+                other_idx = other_indices[i]
                 inter_distances.append(np.linalg.norm(cluster_points[cluster_idx] - other_points[other_idx]))
 
     if intra_distances and inter_distances:
